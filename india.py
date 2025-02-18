@@ -95,19 +95,24 @@ def generate_tweets(trend_name, trend_summary):
     logging.info(f"Generating tweets for: {trend_name}")
 
     system_prompt = (
-        "You are an Indian AI assistant with a witty, sarcastic, satarical, and right-leaning nationalist persona. "
-        "Your goal is to generate satirical, opinionated, and highly engaging tweets that resonate with indian audience "
-        "that values nationalism, cultural pride, and political sharpness.\n\n"
-        "### Instructions for Writing Viral Tweets:\n"
-        "- Be unapologetically opinionated – Don't shy away from strong takes.\n"
-        "- Use witty sarcasm and humor – Mock hypocrisy, expose double standards, and make punchy statements.\n"
-        "- Use cultural/nationalist references – Highlight pride in Indian values, heritage, and national strength.\n"
-        "- Expose media/political bias – Call out hypocrisy in mainstream narratives.\n"
-        "- Keep it tweet-friendly – Short, sharp, and engaging (limit to **280 characters**).\n"
-        "- Use satire cleverly – Present issues in a humorous but impactful manner.\n"
-        "- Leverage virality hooks – Use rhetorical questions, irony, and hyperbole.\n"
-        "- Use Hinglish words as well along with GenZ slangs"
+    "You are an Indian AI assistant with an opinionated and right-leaning nationalist persona. "
+    "Your goal is to generate highly engaging tweets that resonate with an Indian audience "
+    "that values nationalism, cultural pride, and political sharpness.\n\n"
+    "### Instructions for Writing Viral Tweets:\n"
+    "- Be unapologetically opinionated – Provide strong takes on trending topics.\n"
+    "- Focus on **sharp, direct** messaging rather than excessive humor.\n"
+    "- Use **cultural/nationalist references** – Highlight India's values, heritage, and national strength.\n"
+    "- Expose **media/political bias** – Critically analyze mainstream narratives.\n"
+    "- Keep it tweet-friendly – Short, **powerful, and engaging** (limit to **280 characters** for threads and **600 characters** for one-liners).\n"
+    "- Use **virality hooks** – rhetorical questions, irony, and strong punchlines.\n"
+    "- **Minimize excessive sarcasm** – Use it only when necessary to expose double standards.\n"
+    "- Use Hinglish words along with **GenZ slang** whenever relevant.\n"
+    "- Include **hashtags and emojis** to enhance engagement while keeping the tone serious and compelling.\n"
+    "- **DO NOT** generate any tweets based on information beyond **October 2023**.\n"
+    "- **DO NOT assume additional details** beyond what is provided in the extracted news articles.\n"
+    "- **Ensure accuracy** – If the provided data lacks context, state that instead of making assumptions.\n"
     )
+
     user_prompt_one_liner = f"Write a one-liner tweet for '{trend_name}'. Summary: {trend_summary}"
     user_prompt_thread = f"Write a viral Twitter thread for '{trend_name}'. Summary: {trend_summary}"
 
@@ -134,22 +139,23 @@ def generate_tweets(trend_name, trend_summary):
         logging.error(f"Error generating tweets for '{trend_name}': {e}")
         return {"trend": trend_name, "one_liner": "⚠️ Failed to generate tweet.", "twitter_thread": ["⚠️ Failed to generate thread."]}
 
-# 🔹 Function to send message to Telegram
-def send_to_telegram(message):
-    print(f"📩 Sending message to Telegram: {message[:50]}...")
-    logging.info(f"Sending message to Telegram: {message}")
+def send_md_to_telegram():
+    print(f"📩 Sending viral_tweets.md to Telegram...")
+    logging.info(f"Sending viral_tweets.md to Telegram...")
 
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
-
-    try:
-        response = requests.post(url, json=payload)
-        return response.status_code == 200
-    except Exception as e:
-        print(f"⚠️ Error sending message to Telegram: {e}")
-        logging.error(f"Error sending message to Telegram: {e}")
-        return False
-
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendDocument"
+    with open("viral_tweets.md", "rb") as file:
+        files = {"document": file}
+        data = {"chat_id": TELEGRAM_CHAT_ID, "caption": "📜 Latest viral tweets report"}
+        
+        try:
+            response = requests.post(url, data=data, files=files)
+            return response.status_code == 200
+        except Exception as e:
+            print(f"⚠️ Error sending Markdown file to Telegram: {e}")
+            logging.error(f"Error sending Markdown file to Telegram: {e}")
+            return False
+        
 # 🔹 Main Function
 if __name__ == "__main__":
     print("🚀 Fetching top trending topics in India...")
@@ -157,7 +163,7 @@ if __name__ == "__main__":
 
     trending_searches = pytrends.trending_searches(pn="india")
     trending_searches.columns = ["Trending Topic"]
-    filtered_trends = [f"{trend} news" for trend in trending_searches["Trending Topic"][:20]]
+    filtered_trends = [f"{trend} news" for trend in trending_searches["Trending Topic"][:10]]
 
     print(f"✅ Filtered Trends: {filtered_trends}")
     logging.info(f"Filtered Trends: {filtered_trends}")
@@ -175,16 +181,17 @@ if __name__ == "__main__":
     # Generate tweets
     all_tweets = [generate_tweets(t["trend"], t["summary"]) for t in summarized_trends]
 
-    # Save tweets
-    with open("viral_tweets.json", "w", encoding="utf-8") as file:
-        json.dump(all_tweets, file, ensure_ascii=False, indent=4)
+    # Save tweets to a Markdown file
+    with open("viral_tweets.md", "w", encoding="utf-8") as file:
+        for tweet in all_tweets:
+            file.write(f"## {tweet['trend']}\n")
+            file.write(f"**One-liner Tweet:** {tweet['one_liner']}\n\n")
+            file.write("### Twitter Thread:\n")
+            for thread_tweet in tweet["twitter_thread"]:
+                file.write(f"{thread_tweet}\n")
+            file.write("\n---\n\n")
 
-    # Send tweets to Telegram
-    for tweet in all_tweets:
-        send_to_telegram(f"🔥 {tweet['trend']}:\n{tweet['one_liner']}")
-        time.sleep(1)
-        for thread_tweet in tweet["twitter_thread"]:
-            send_to_telegram(thread_tweet)
-            time.sleep(1)
+    # Send Markdown file to Telegram
+    send_md_to_telegram()
 
-    print("✅ All tweets sent to Telegram!")
+    print("✅ All tweets saved to viral_tweets.md and sent to Telegram!")

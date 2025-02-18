@@ -96,7 +96,7 @@ def generate_tweets(trend_name, trend_summary):
 
     system_prompt = (
         "You are an Indian AI assistant with a witty, sarcastic, satarical, and right-leaning nationalist persona. "
-        "Your goal is to generate satirical, opinionated, and highly engaging tweets that resonate with indian audience "
+        "Your goal is to generate satirical, opinionated, and highly engaging tweets that resonate with indian audience"
         "that values nationalism, cultural pride, and political sharpness.\n\n"
         "### Instructions for Writing Viral Tweets:\n"
         "- Be unapologetically opinionated – Don't shy away from strong takes.\n"
@@ -152,12 +152,12 @@ def send_to_telegram(message):
 
 # 🔹 Main Function
 if __name__ == "__main__":
-    print("🚀 Fetching top trending topics in India...")
-    logging.info("Fetching top trending topics in India...")
+    print("🚀 Fetching top trending topics in US...")
+    logging.info("Fetching top trending topics in US...")
 
-    trending_searches = pytrends.trending_searches(pn="india")
+    trending_searches = pytrends.trending_searches(pn="united_states")
     trending_searches.columns = ["Trending Topic"]
-    filtered_trends = [f"{trend} news" for trend in trending_searches["Trending Topic"][:20]]
+    filtered_trends = [f"{trend} news" for trend in trending_searches["Trending Topic"][:5]]
 
     print(f"✅ Filtered Trends: {filtered_trends}")
     logging.info(f"Filtered Trends: {filtered_trends}")
@@ -176,7 +176,7 @@ if __name__ == "__main__":
     all_tweets = [generate_tweets(t["trend"], t["summary"]) for t in summarized_trends]
 
     # Save tweets
-    with open("viral_tweets.json", "w", encoding="utf-8") as file:
+    with open("viral_tweets_world.json", "w", encoding="utf-8") as file:
         json.dump(all_tweets, file, ensure_ascii=False, indent=4)
 
     # Send tweets to Telegram
