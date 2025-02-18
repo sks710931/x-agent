@@ -10,11 +10,33 @@ from bs4 import BeautifulSoup
 # 🔹 Set up logging
 logging.basicConfig(filename="trend_search.log", level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
+# 🔹 Expanded list of generic trends to ignore
+GENERIC_TRENDS = {
+    "news today", "latest news", "breaking news", "top news", "trending now", "current events",
+    "live updates", "today’s headlines", "viral news", "important news",
+    "hot topics", "biggest news", "daily news", "top stories",
+    "sports news", "business news", "entertainment news", "stock market news",
+    "weather update", "COVID update", "gold price today", "petrol price today",
+    "political news", "technology news", "science news", "education news",
+    "latest updates", "financial news", "global news", "Indian news",
+    "Google news", "WhatsApp news", "YouTube trending", "trending searches",
+    "India trends", "trending news in India"
+}
+
+# 🔹 Function to clean and modify search queries
+def clean_trend(trend):
+    trend_lower = trend.lower()
+    if trend_lower in GENERIC_TRENDS:
+        return None  # Ignore generic trends
+    if "news" not in trend_lower:
+        return f"{trend} news"  # Add "news" if not already present
+    return trend  # Return as is if it already contains "news"
+
 # 🔹 Function to search DuckDuckGo for a given query
 def duckduckgo_search(query):
     search_results = []
     with DDGS() as ddgs:
-        for result in ddgs.text(query, max_results=10):  # Fetch top 5 results
+        for result in ddgs.text(query, max_results=5):  # Fetch top 5 results
             search_results.append({"title": result["title"], "url": result["href"]})
     return search_results
 
@@ -41,19 +63,27 @@ trending_searches = pytrends.trending_searches(pn="india")
 # 🔹 Rename the first column to "Trending Topic"
 trending_searches.columns = ["Trending Topic"]
 
-# 🔹 Display top trends
-print("🔥 Trending Topics in India:")
+# 🔹 Display raw trends
+print("🔥 Raw Trending Topics in India:")
 print(trending_searches.head(20))
 
-# 🔹 Save trends to CSV
-trending_searches.to_csv("google_trends_india.csv", index=False)
-print("✅ Trends saved to google_trends_india.csv")
+# 🔹 Clean trends: Remove generic ones & modify others
+filtered_trends = [clean_trend(trend) for trend in trending_searches["Trending Topic"][:20]]
+filtered_trends = [t for t in filtered_trends if t is not None]  # Remove `None` values
+
+# 🔹 Display filtered trends
+print("\n🔥 Filtered & Optimized Trends:")
+print(filtered_trends)
+
+# 🔹 Save filtered trends to CSV
+pd.DataFrame({"Trending Topic": filtered_trends}).to_csv("google_trends_india.csv", index=False)
+print("✅ Filtered trends saved to google_trends_india.csv")
 
 # 🔹 Storage list for automation processing
 trend_data = []
 
-# 🔹 Search Each Trend on DuckDuckGo & Extract Text
-for trend in trending_searches["Trending Topic"][:20]:  # Searching top 10 trends
+# 🔹 Search Each Filtered Trend on DuckDuckGo & Extract Text
+for trend in filtered_trends:
     print(f"\n🔍 Searching DuckDuckGo for: {trend}")
     logging.info(f"Searching DuckDuckGo for: {trend}")
     
@@ -77,12 +107,7 @@ for trend in trending_searches["Trending Topic"][:20]:  # Searching top 10 trend
         })
 
     # ✅ Respect ethical scraping limits (Avoid detection)
-    time.sleep(2)  # Wait 2 seconds between requests
-
-# 🔹 Save extracted data to CSV
-df = pd.DataFrame(trend_data)
-df.to_csv("trend_search_results.csv", index=False)
-print("✅ Search results saved to trend_search_results.csv")
+    time.sleep(3)  # Wait 2 seconds between requests
 
 # 🔹 Save extracted data to JSON
 with open("trend_search_results.json", "w", encoding="utf-8") as json_file:
